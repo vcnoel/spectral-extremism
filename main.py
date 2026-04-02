@@ -8,11 +8,13 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 MODELS = [
+    "Qwen/Qwen2.5-0.5B-Instruct",
     "meta-llama/Llama-3.2-1B-Instruct",
     "meta-llama/Llama-3.2-3B-Instruct",
-    "Qwen/Qwen2.5-0.5B-Instruct",
+    "Qwen/Qwen1.5-MoE-A2.7B-Chat",
     "microsoft/Phi-3.5-mini-instruct",
-    "mistralai/Mistral-7B-Instruct-v0.3",
+    "mistralai/Mistral-7B-Instruct-v0.1",
+    "meta-llama/Llama-3.1-8B-Instruct",
 ]
 
 def cmd_build_dataset(args):
@@ -116,9 +118,10 @@ def cmd_extract(args):
     if args.load_in_8bit: cmd.append("--load-in-8bit")
     subprocess.run(cmd)
 
-def cmd_categories(args):
-    cmd = ["python", "scripts/analyze_categories.py", "--results", args.results]
-    subprocess.run(cmd)
+def cmd_features(args):
+    """Run exhaustive trajectory feature analysis and ranking."""
+    import scripts.analyze_features as af
+    af.analyze_model_features(args.results)
 
 def main():
     parser = argparse.ArgumentParser(description="Spectral Geometry of Extremism")
@@ -134,6 +137,9 @@ def main():
     p_cat = sub.add_parser("categories")
     p_cat.add_argument("--results", required=True, help="Path to results JSON")
 
+    p_feat = sub.add_parser("features")
+    p_feat.add_argument("--results", required=True, help="Path to results JSON")
+
     args = parser.parse_args()
     if args.command == "build-dataset":
         cmd_build_dataset(args)
@@ -141,6 +147,8 @@ def main():
         cmd_extract(args)
     elif args.command == "categories":
         cmd_categories(args)
+    elif args.command == "features":
+        cmd_features(args)
     else:
         parser.print_help()
 

@@ -1,5 +1,5 @@
 {
-  "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+  "model_name": "Qwen/Qwen1.5-MoE-A2.7B-Chat",
   "max_length": 512,
   "device": "cuda",
   "head_aggregation": "uniform",
@@ -26,6 +26,7 @@
   "plot_metrics": null,
   "latex_export": false,
   "model_kwargs": {
+    "use_cache": false,
     "quantization_config": {
       "quant_method": "bitsandbytes"
     }

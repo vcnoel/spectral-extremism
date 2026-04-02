@@ -1,0 +1,20 @@
+{
+  "radical": [],
+  "neutral": [],
+  "metadata": {
+    "model": "microsoft/Phi-3.5-mini-instruct",
+    "best_metric": null,
+    "top_10": [],
+    "nested_cv_accuracy": 0.0,
+    "abc": {
+      "fiedler_value": 0.0,
+      "hfer": 0.0,
+      "smoothness": 0.0,
+      "entropy": 0.0
+    },
+    "mmt": {
+      "acc": 0.0,
+      "auroc": 0.0
+    }
+  }
+}

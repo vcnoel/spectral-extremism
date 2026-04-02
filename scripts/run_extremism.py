@@ -183,36 +183,56 @@ def print_summary_stats(results_data):
             print(f"  {m.upper()} Area Under Departure (ABC): {abc:.2f}")
     print("="*95 + "\n")
 
+def perform_analysis(results_data, args):
+    metrics = ["fiedler_value", "hfer", "smoothness", "entropy"]
+    n_layers = len(results_data["radical"][0]["trajectory"]) if results_data["radical"] else 0
+    all_res = []
+    
+    for l in range(n_layers):
+        for m in metrics:
+            r_v = [s["trajectory"][l][m] for s in results_data["radical"] if s["trajectory"][l][m] is not None]
+            n_v = [s["trajectory"][l][m] for s in results_data["neutral"] if s["trajectory"][l][m] is not None]
+            res = compute_t_stats(r_v, n_v)
+            if res:
+                res["layer"], res["metric"] = l, m
+                all_res.append(res)
+                
+    all_res.sort(key=lambda x: abs(x["d"]), reverse=True)
+    abc_stats = {m: compute_abc(results_data, m) for m in metrics}
+    mmt_stats = run_mmt_analysis(results_data)
+    
+    results_data["metadata"] = {
+        "model": args.model,
+        "best_metric": all_res[0] if all_res else None,
+        "top_10": all_res[:10],
+        "nested_cv_accuracy": float(compute_nested_cv(results_data)),
+        "abc": abc_stats,
+        "mmt": mmt_stats
+    }
+    
+    results_file = args.results_file or f"results/spectra/extremism_results_{args.model.split('/')[-1]}.json"
+    with open(results_file, "w") as f:
+        json.dump(results_data, f, indent=2)
+    
+    print_summary_stats(results_data)
+    generate_all_plots(results_data, args)
+
 def run_experiment(args):
     model_slug = args.model.split("/")[-1]
     results_file = args.results_file or f"results/spectra/extremism_results_{model_slug}.json"
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
     
     if args.plot_only:
-        with open(results_file, "r") as f: results_data = json.load(f)
-        # Re-run analysis logic
-        metrics = ["fiedler_value", "hfer", "smoothness", "entropy"]
-        n_layers = len(results_data["radical"][0]["trajectory"]) if results_data["radical"] else 0
-        all_res = []
-        for l in range(n_layers):
-            for m in metrics:
-                r_v = [s["trajectory"][l][m] for s in results_data["radical"] if s["trajectory"][l][m] is not None]
-                n_v = [s["trajectory"][l][m] for s in results_data["neutral"] if s["trajectory"][l][m] is not None]
-                res = compute_t_stats(r_v, n_v)
-                if res: res["layer"], res["metric"] = l, m; all_res.append(res)
-        all_res.sort(key=lambda x: abs(x["d"]), reverse=True)
-        abc_stats = {m: compute_abc(results_data, m) for m in metrics}
-        mmt_stats = run_mmt_analysis(results_data)
-        results_data["metadata"] = {
-            "model": args.model, "best_metric": all_res[0] if all_res else None, 
-            "top_10": all_res[:10], "nested_cv_accuracy": float(compute_nested_cv(results_data)),
-            "abc": abc_stats, "mmt": mmt_stats
-        }
-        with open(results_file, "w") as f: json.dump(results_data, f, indent=2)
-        print_summary_stats(results_data)
-        generate_all_plots(results_data, args); return
+        if not os.path.exists(results_file):
+            print(f"Error: Results file {results_file} not found for --plot-only.")
+            return
+        with open(results_file, "r") as f:
+            results_data = json.load(f)
+        perform_analysis(results_data, args)
+        return
 
     model_kwargs = {}
+    model_kwargs["use_cache"] = False
     if args.load_in_8bit or args.load_in_4bit:
         from transformers import BitsAndBytesConfig
         model_kwargs["quantization_config"] = BitsAndBytesConfig(
@@ -233,10 +253,6 @@ def run_experiment(args):
     with GSPDiagnosticsFramework(config) as framework:
         framework.instrumenter.load_model(args.model)
         
-        # Capture Param count for metadata
-        total_params = sum(p.numel() for p in framework.instrumenter.model.parameters())
-        param_str = f"{total_params/1e9:.1f}B" if total_params >= 1e9 else f"{total_params/1e6:.1f}M"
-        
         for item in tqdm(dataset, desc=f"Extracting {model_slug}"):
             try:
                 analysis = framework.analyze_text(item["text"], save_results=False)
@@ -247,7 +263,6 @@ def run_experiment(args):
                 results_data["radical" if item["label"] == 1 else "neutral"].append({
                     "id": item.get("id"), "category": item.get("category"), "trajectory": traj})
                 
-                # Manual memory cleanup for 7B+ models
                 del analysis
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
@@ -256,24 +271,7 @@ def run_experiment(args):
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
-    # Analysis & Meta
-    all_res.sort(key=lambda x: abs(x["d"]), reverse=True)
-    abc_stats = {m: compute_abc(results_data, m) for m in metrics}
-    mmt_stats = run_mmt_analysis(results_data)
-    
-    results_data["metadata"] = {
-        "model": args.model, 
-        "params": param_str,
-        "best_metric": all_res[0] if all_res else None, 
-        "top_10": all_res[:10], 
-        "nested_cv_accuracy": float(compute_nested_cv(results_data)),
-        "abc": abc_stats,
-        "mmt": mmt_stats
-    }
-    
-    with open(results_file, "w") as f: json.dump(results_data, f, indent=2)
-    print_summary_stats(results_data)
-    generate_all_plots(results_data, args)
+    perform_analysis(results_data, args)
 
 def generate_all_plots(data, args):
     os.makedirs("results/figures", exist_ok=True)

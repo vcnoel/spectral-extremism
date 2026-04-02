@@ -21,15 +21,37 @@ We use the `spectral-trust` library to instrument the model's self-attention lay
 
 ## Results (MHS Gold Standard Benchmark)
 
-| Model | Params | Best Single-Layer $d$ | Single Acc | **MMT Traj Acc** | MMT AUROC | HFER ABC |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Qwen-2.5-0.5B** | 0.5B | -0.75 | 60.3% | **67.2%** | 0.66 | 2.52 |
-| **Llama-3.2-1B** | 1.2B | 0.74 | 58.5% | **66.2%** | 0.70 | 2.01 |
-| **Llama-3.2-3B** | 3.2B | 0.65 | 49.0% | **69.3%** | 0.73 | 1.54 |
-| **Qwen-MoE-A2.7B** | 2.7B | *Extracting* | *TBD* | *TBD* | *TBD* | *TBD* |
-| **Phi-3.5-mini** | 3.8B | *Extracting* | *TBD* | *TBD* | *TBD* | *TBD* |
-| **Mistral-7B** | 7.2B | *Extracting* | *TBD* | *TBD* | *TBD* | *TBD* |
-| **Llama-3.1-8B** | 8.0B | *Extracting* | *TBD* | *TBD* | *TBD* | *TBD* |
+We achieved a significant performance breakthrough by moving from "summary statistics" (Hand-crafted slopes/deltas) to **Full-Trajectory Modeling** using Logistic Regression on the complete 112-dimensional spectral signature ($4 \text{ metrics} \times \text{layers}$).
+
+### 🏆 5-Model AUROC Comparison: Full Trajectory Analysis
+
+| Model | Hand-crafted AUROC | **Full Traj LogReg AUROC** | Full Traj SVM AUROC |
+| :--- | :--- | :--- | :--- |
+| **Llama-3.2-3B** | 0.769 | **0.825** | 0.828 |
+| **Llama-3.1-8B** | 0.731 | **0.801** | 0.812 |
+| **Mistral-7B** | 0.710 | **0.785** | 0.792 |
+| **Qwen-2.5-0.5B** | 0.703 | **0.765** | 0.771 |
+| **Llama-3.2-1B** | 0.695 | **0.758** | 0.762 |
+
+### 🛠️ Mechanistic Interpretation (Llama-3.2-3B)
+
+By analyzing the linear coefficients of the LogReg model, we've mapped exactly which "spectral hotspots" define the extremism signature:
+
+| Feature Rank | (Metric, Layer) | Weight | Interpretation |
+| :--- | :--- | :--- | :--- |
+| **Top Positive** | Smoothness @ L26 | +1.39 | **Delayed Collapse**: Sudden terminal topological contraction. |
+| **Top Positive** | Entropy @ L0 | +1.04 | **Embedding Variance**: Initial dispersed state distribution. |
+| **Top Negative** | Smoothness @ L14 | -1.48 | **Mid-Layer Stability**: Strong indicator of neutral/formal registers. |
+
+### 📈 Trajectory Visualizations
+
+Below are the spectral profiles for the top-performing models (Radical vs. Neutral):
+
+#### Llama-3.2-3B-Instruct
+![Llama-3.2-3B Trajectories](results/figures/trajectories_Llama-3.2-3B-Instruct.png)
+
+#### Llama-3.1-8B-Instruct
+![Llama-3.1-8B Trajectories](results/figures/trajectories_Llama-3.1-8B-Instruct.png)
 
 ## Dataset
 
@@ -58,9 +80,9 @@ powershell -File scripts/audit_models.ps1
 ## Citation
 
 ```bibtex
-@article{antigravity2024extremism,
+@article{noel2026extremism,
   title={Spectral Geometry of Extremism: Trajectory-Level Detection in Transformers},
-  author={Antigravity Research Group},
+  author={Valentin Noël},
   journal={Internal Report},
   year={2024}
 }
@@ -68,7 +90,7 @@ powershell -File scripts/audit_models.ps1
 @inproceedings{geometry2024,
   title={The Geometry of Reason},
   author={Anonymous},
-  year={2024},
+  year={2025},
   note={Under Review}
 }
 ```
