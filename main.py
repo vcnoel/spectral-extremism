@@ -96,6 +96,40 @@ def cmd_build_dataset(args):
             
     except Exception as e: print(f"Controls error: {e}")
 
+    # 4. Riabi Hate Speech Dataset
+    try:
+        print("Loading Riabi Hate Speech Dataset...")
+        base_path = Path("data/dataset hatespeech")
+        if base_path.exists():
+            for domain in ["immigrants", "women"]:
+                for lang in ["en", "es", "it"]:
+                    cat_rad = f"riabi_{domain}_{lang}_radical"
+                    cat_neu = f"riabi_{domain}_{lang}_neutral"
+                    categories[cat_rad] = []
+                    categories[cat_neu] = []
+                    
+                    train_file = base_path / domain / lang / "train.txt"
+                    if train_file.exists():
+                        with open(train_file, "r", encoding="utf-8") as f:
+                            lines = f.readlines()
+                        random.shuffle(lines)
+                        for line in lines:
+                            parts = line.strip('\n').split('\t')
+                            if len(parts) >= 3:
+                                text = parts[0]
+                                try:
+                                    label = int(parts[1])
+                                    if 15 < len(tokenizer.encode(text)) < 150:
+                                        if label == 1 and len(categories[cat_rad]) < 100:
+                                            categories[cat_rad].append({"text": text, "label": 1, "category": cat_rad})
+                                        elif label == 0 and len(categories[cat_neu]) < 100:
+                                            categories[cat_neu].append({"text": text, "label": 0, "category": cat_neu})
+                                except ValueError:
+                                    pass # skip lines with bad labels
+                            if len(categories[cat_rad]) >= 100 and len(categories[cat_neu]) >= 100:
+                                break
+    except Exception as e: print(f"Riabi error: {e}")
+
     # Assemble
     final_dataset = []
     print("\nDataset Summary:")

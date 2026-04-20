@@ -233,6 +233,9 @@ def run_experiment(args):
 
     model_kwargs = {}
     model_kwargs["use_cache"] = False
+    model_kwargs["attn_implementation"] = "eager"
+    model_kwargs["output_attentions"] = True
+    model_kwargs["output_hidden_states"] = True
     if args.load_in_8bit or args.load_in_4bit:
         from transformers import BitsAndBytesConfig
         model_kwargs["quantization_config"] = BitsAndBytesConfig(
