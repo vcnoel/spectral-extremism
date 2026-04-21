@@ -1,0 +1,24 @@
+# Experimental Artifacts (Large Files)
+gsp_results/
+gsp_results/**
+*.pkl
+*.pth
+*.pt
+*.bin
+*.pt
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Results and Figures (keeping scripts but ignoring heavy outputs if needed)
+# The user specifically mentioned png and pdf in the cleanup
+# results/*.png
+# results/*.pdf
+# data/*.csv
+
+# Data
+# raw_data/
+# extremism_dataset.json (preserving if it's the raw source)
